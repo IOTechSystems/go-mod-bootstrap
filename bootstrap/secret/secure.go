@@ -18,6 +18,7 @@ package secret
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -161,6 +162,11 @@ func (p *SecureProvider) SecretsLastUpdated() time.Time {
 
 // GetAccessToken returns the access token for the requested token type.
 func (p *SecureProvider) GetAccessToken(tokenType string, serviceKey string) (string, error) {
+	if strings.HasPrefix(serviceKey, "app-") {
+		serviceKey = "app-service"
+		p.lc.Infof("[EdgeXpert] Overwrote ASC serviceKey")
+	}
+
 	switch tokenType {
 	case TokenTypeConsul:
 		return p.secretClient.GenerateConsulToken(serviceKey)
