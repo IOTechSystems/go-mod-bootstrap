@@ -15,13 +15,17 @@
 package secret
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
 
+	mock2 "github.com/stretchr/testify/mock"
+
 	bootstrapConfig "github.com/edgexfoundry/go-mod-bootstrap/v2/config"
 
 	"github.com/edgexfoundry/go-mod-core-contracts/v2/clients/logger"
+
 	"github.com/edgexfoundry/go-mod-secrets/v2/pkg"
 	mocks2 "github.com/edgexfoundry/go-mod-secrets/v2/pkg/token/authtokenloader/mocks"
 	"github.com/edgexfoundry/go-mod-secrets/v2/secrets"
@@ -55,7 +59,7 @@ func TestSecureProvider_GetSecrets(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.Name, func(t *testing.T) {
-			target := NewSecureProvider(tc.Config, logger.MockLogger{}, nil)
+			target := NewSecureProvider(context.Background(), tc.Config, logger.MockLogger{}, nil)
 			target.SetClient(tc.Client)
 			actual, err := target.GetSecret(tc.Path, tc.Keys...)
 			if tc.ExpectError {
@@ -76,7 +80,7 @@ func TestSecureProvider_GetSecrets_Cached(t *testing.T) {
 	// Use the Once method so GetSecrets can be changed below
 	mock.On("GetSecrets", "redis", "username", "password").Return(expected, nil).Once()
 
-	target := NewSecureProvider(nil, logger.MockLogger{}, nil)
+	target := NewSecureProvider(context.Background(), nil, logger.MockLogger{}, nil)
 	target.SetClient(mock)
 
 	actual, err := target.GetSecret("redis", "username", "password")
@@ -84,13 +88,13 @@ func TestSecureProvider_GetSecrets_Cached(t *testing.T) {
 	assert.Equal(t, expected, actual)
 
 	// Now have mock return error if it is called which should not happen of secrets are cached
-	mock.On("GetSecrets", "redis", "username", "password").Return(nil, errors.New("No Cached"))
+	mock.On("GetSecrets", "redis", "username", "password").Return(nil, errors.New("no Cached"))
 	actual, err = target.GetSecret("redis", "username", "password")
 	require.NoError(t, err)
 	assert.Equal(t, expected, actual)
 
 	// Now check for error when not all requested keys not in cache.
-	mock.On("GetSecrets", "redis", "username", "password2").Return(nil, errors.New("No Cached"))
+	mock.On("GetSecrets", "redis", "username", "password2").Return(nil, errors.New("no Cached"))
 	_, err = target.GetSecret("redis", "username", "password2")
 	require.Error(t, err)
 }
@@ -103,7 +107,7 @@ func TestSecureProvider_GetSecrets_Cached_Invalidated(t *testing.T) {
 	mock.On("GetSecrets", "redis", "username", "password").Return(expected, nil).Once()
 	mock.On("StoreSecrets", "redis", expected).Return(nil)
 
-	target := NewSecureProvider(nil, logger.MockLogger{}, nil)
+	target := NewSecureProvider(context.Background(), nil, logger.MockLogger{}, nil)
 	target.SetClient(mock)
 
 	actual, err := target.GetSecret("redis", "username", "password")
@@ -115,7 +119,7 @@ func TestSecureProvider_GetSecrets_Cached_Invalidated(t *testing.T) {
 	require.NoError(t, err)
 
 	// Now have mock return error is it is called which should now happen if the cache was properly invalidated by the above call to StoreSecrets
-	mock.On("GetSecrets", "redis", "username", "password").Return(nil, errors.New("No Cached"))
+	mock.On("GetSecrets", "redis", "username", "password").Return(nil, errors.New("no Cached"))
 	_, err = target.GetSecret("redis", "username", "password")
 	require.Error(t, err)
 }
@@ -124,7 +128,7 @@ func TestSecureProvider_StoreSecrets_Secure(t *testing.T) {
 	input := map[string]string{"username": "admin", "password": "sam123!"}
 	mock := &mocks.SecretClient{}
 	mock.On("StoreSecrets", "redis", input).Return(nil)
-	mock.On("StoreSecrets", "error", input).Return(errors.New("Some error happened"))
+	mock.On("StoreSecrets", "error", input).Return(errors.New("some error happened"))
 
 	tests := []struct {
 		Name        string
@@ -140,7 +144,7 @@ func TestSecureProvider_StoreSecrets_Secure(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.Name, func(t *testing.T) {
-			target := NewSecureProvider(nil, logger.MockLogger{}, nil)
+			target := NewSecureProvider(context.Background(), nil, logger.MockLogger{}, nil)
 			target.SetClient(tc.Client)
 
 			err := target.StoreSecret(tc.Path, input)
@@ -159,7 +163,7 @@ func TestSecureProvider_SecretsLastUpdated(t *testing.T) {
 	mock := &mocks.SecretClient{}
 	mock.On("StoreSecrets", "redis", input).Return(nil)
 
-	target := NewSecureProvider(nil, logger.MockLogger{}, nil)
+	target := NewSecureProvider(context.Background(), nil, logger.MockLogger{}, nil)
 	target.SetClient(mock)
 
 	previous := target.SecretsLastUpdated()
@@ -171,7 +175,7 @@ func TestSecureProvider_SecretsLastUpdated(t *testing.T) {
 }
 
 func TestSecureProvider_SecretsUpdated(t *testing.T) {
-	target := NewSecureProvider(nil, logger.MockLogger{}, nil)
+	target := NewSecureProvider(context.Background(), nil, logger.MockLogger{}, nil)
 	previous := target.SecretsLastUpdated()
 	time.Sleep(1 * time.Second)
 	target.SecretsUpdated()
@@ -190,7 +194,7 @@ func TestSecureProvider_DefaultTokenExpiredCallback(t *testing.T) {
 	mockTokenLoader := &mocks2.AuthTokenLoader{}
 	mockTokenLoader.On("Load", goodTokenFile).Return(newToken, nil)
 	mockTokenLoader.On("Load", sameTokenFile).Return(expiredToken, nil)
-	mockTokenLoader.On("Load", badTokenFile).Return("", errors.New("Not Found"))
+	mockTokenLoader.On("Load", badTokenFile).Return("", errors.New("not found"))
 
 	tests := []struct {
 		Name          string
@@ -212,7 +216,7 @@ func TestSecureProvider_DefaultTokenExpiredCallback(t *testing.T) {
 				},
 			}
 
-			target := NewSecureProvider(config, logger.MockLogger{}, mockTokenLoader)
+			target := NewSecureProvider(context.Background(), config, logger.MockLogger{}, mockTokenLoader)
 			actualToken, actualRetry := target.DefaultTokenExpiredCallback(tc.ExpiredToken)
 			assert.Equal(t, tc.ExpectedToken, actualToken)
 			assert.Equal(t, tc.ExpectedRetry, actualRetry)
@@ -237,7 +241,7 @@ func TestSecureProvider_GetAccessToken(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			target := NewSecureProvider(TestConfig{}, logger.MockLogger{}, nil)
+			target := NewSecureProvider(context.Background(), TestConfig{}, logger.MockLogger{}, nil)
 			target.SetClient(mock)
 
 			actualToken, err := target.GetAccessToken(test.tokenType, testServiceKey)
@@ -248,6 +252,52 @@ func TestSecureProvider_GetAccessToken(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, expectedToken, actualToken)
+		})
+	}
+}
+
+func TestSecureProvider_seedSecrets(t *testing.T) {
+	allGood := `{"secrets": [{"path": "auth","imported": false,"secretData": [{"key": "user1","value": "password1"}]}]}`
+	allGoodExpected := `{"secrets":[{"path":"auth","imported":true,"secretData":[]}]}`
+	badJson := `{"secrets": [{"path": "","imported": false,"secretData": null}]}`
+
+	tests := []struct {
+		name          string
+		secretsJson   string
+		expectedJson  string
+		mockError     bool
+		expectedError string
+	}{
+		{"Valid", allGood, allGoodExpected, false, ""},
+		{"Partial Valid", allGood, allGoodExpected, false, ""},
+		{"Bad JSON", badJson, "", false, "seeding secrets failed unmarshaling JSON: ServiceSecrets.Secrets[0].Path field should not be empty string; ServiceSecrets.Secrets[0].SecretData field is required"},
+		{"Store Error", allGood, "", true, "1 error occurred:\n\t* failed to store secret for 'auth': store failed\n\n"},
+	}
+
+	target := NewSecureProvider(context.Background(), TestConfig{}, logger.MockLogger{}, nil)
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+
+			mock := &mocks.SecretClient{}
+
+			if test.mockError {
+				mock.On("StoreSecrets", mock2.Anything, mock2.Anything).Return(errors.New("store failed")).Once()
+			} else {
+				mock.On("StoreSecrets", mock2.Anything, mock2.Anything).Return(nil).Once()
+			}
+
+			target.SetClient(mock)
+
+			actual, err := target.seedSecrets([]byte(test.secretsJson))
+			if len(test.expectedError) > 0 {
+				require.Error(t, err)
+				assert.EqualError(t, err, test.expectedError)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, test.expectedJson, string(actual))
 		})
 	}
 }

@@ -16,20 +16,28 @@
 package secret
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/edgexfoundry/go-mod-bootstrap/v2/bootstrap/interfaces"
-
+	"github.com/edgexfoundry/go-mod-bootstrap/v2/config"
 	"github.com/edgexfoundry/go-mod-core-contracts/v2/clients/logger"
+	"github.com/edgexfoundry/go-mod-core-contracts/v2/dtos/common"
 	"github.com/edgexfoundry/go-mod-secrets/v2/pkg/token/authtokenloader"
 	"github.com/edgexfoundry/go-mod-secrets/v2/secrets"
+	"github.com/hashicorp/go-multierror"
 )
 
-const TokenTypeConsul = "consul"
+const (
+	TokenTypeConsul      = "consul"
+	AccessTokenAuthError = "HTTP response with status code 403"
+	SecretsAuthError     = "Received a '403' response"
+)
 
 // SecureProvider implements the SecretProvider interface
 type SecureProvider struct {
@@ -40,10 +48,11 @@ type SecureProvider struct {
 	secretsCache  map[string]map[string]string // secret's path, key, value
 	cacheMutex    *sync.RWMutex
 	lastUpdated   time.Time
+	ctx           context.Context
 }
 
 // NewSecureProvider creates & initializes Provider instance for secure secrets.
-func NewSecureProvider(config interfaces.Configuration, lc logger.LoggingClient, loader authtokenloader.AuthTokenLoader) *SecureProvider {
+func NewSecureProvider(ctx context.Context, config interfaces.Configuration, lc logger.LoggingClient, loader authtokenloader.AuthTokenLoader) *SecureProvider {
 	provider := &SecureProvider{
 		configuration: config,
 		lc:            lc,
@@ -51,6 +60,7 @@ func NewSecureProvider(config interfaces.Configuration, lc logger.LoggingClient,
 		secretsCache:  make(map[string]map[string]string),
 		cacheMutex:    &sync.RWMutex{},
 		lastUpdated:   time.Now(),
+		ctx:           ctx,
 	}
 	return provider
 }
@@ -74,6 +84,13 @@ func (p *SecureProvider) GetSecret(path string, keys ...string) (map[string]stri
 	}
 
 	secureSecrets, err := p.secretClient.GetSecrets(path, keys...)
+
+	retry, err := p.reloadTokenOnAuthError(err)
+	if retry {
+		// Retry with potential new token
+		secureSecrets, err = p.secretClient.GetSecrets(path, keys...)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -136,6 +153,13 @@ func (p *SecureProvider) StoreSecret(path string, secrets map[string]string) err
 	}
 
 	err := p.secretClient.StoreSecrets(path, secrets)
+
+	retry, err := p.reloadTokenOnAuthError(err)
+	if retry {
+		// Retry with potential new token
+		err = p.secretClient.StoreSecrets(path, secrets)
+	}
+
 	if err != nil {
 		return err
 	}
@@ -148,6 +172,30 @@ func (p *SecureProvider) StoreSecret(path string, secrets map[string]string) err
 	//indicate to the SDK that the cache has been invalidated
 	p.lastUpdated = time.Now()
 	return nil
+}
+
+func (p *SecureProvider) reloadTokenOnAuthError(err error) (bool, error) {
+	if err == nil {
+		return false, nil
+	}
+
+	if !strings.Contains(err.Error(), SecretsAuthError) &&
+		!strings.Contains(err.Error(), AccessTokenAuthError) {
+		return false, err
+	}
+
+	// Reload token in case new token was created causing the auth error
+	token, err := p.loader.Load(p.configuration.GetBootstrap().SecretStore.TokenFile)
+	if err != nil {
+		return false, err
+	}
+
+	err = p.secretClient.SetAuthToken(p.ctx, token)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 // SecretsUpdated is not need for secure secrets as this is handled when secrets are stored.
@@ -169,13 +217,26 @@ func (p *SecureProvider) GetAccessToken(tokenType string, serviceKey string) (st
 
 	switch tokenType {
 	case TokenTypeConsul:
-		return p.secretClient.GenerateConsulToken(serviceKey)
+		token, err := p.secretClient.GenerateConsulToken(serviceKey)
+
+		retry, err := p.reloadTokenOnAuthError(err)
+		if retry {
+			// Retry with potential new token
+			token, err = p.secretClient.GenerateConsulToken(serviceKey)
+		}
+
+		if err != nil {
+			return "", err
+		}
+
+		return token, nil
+
 	default:
 		return "", fmt.Errorf("invalid access token type '%s'", tokenType)
 	}
 }
 
-// defaultTokenExpiredCallback is the default implementation of tokenExpiredCallback function
+// DefaultTokenExpiredCallback is the default implementation of tokenExpiredCallback function
 // It utilizes the tokenFile to re-read the token and enable retry if any update from the expired token
 func (p *SecureProvider) DefaultTokenExpiredCallback(expiredToken string) (replacementToken string, retry bool) {
 	tokenFile := p.configuration.GetBootstrap().SecretStore.TokenFile
@@ -195,4 +256,79 @@ func (p *SecureProvider) DefaultTokenExpiredCallback(expiredToken string) (repla
 	}
 
 	return reReadToken, true
+}
+
+// LoadServiceSecrets loads the service secrets from the specified file and stores them in the service's SecretStore
+func (p *SecureProvider) LoadServiceSecrets(secretStoreConfig config.SecretStoreInfo) error {
+
+	contents, err := os.ReadFile(secretStoreConfig.SecretsFile)
+	if err != nil {
+		return fmt.Errorf("seeding secrets failed: %s", err.Error())
+	}
+
+	data, seedingErrs := p.seedSecrets(contents)
+
+	if secretStoreConfig.DisableScrubSecretsFile {
+		p.lc.Infof("Scrubbing of secrets file disable.")
+		return seedingErrs
+	}
+
+	if err := os.WriteFile(secretStoreConfig.SecretsFile, data, 0); err != nil {
+		return fmt.Errorf("seeding secrets failed: unable to overwrite file with secret data removed: %s", err.Error())
+	}
+
+	p.lc.Infof("Scrubbing of secrets file complete.")
+
+	return seedingErrs
+}
+
+func (p *SecureProvider) seedSecrets(contents []byte) ([]byte, error) {
+	serviceSecrets, err := UnmarshalServiceSecretsJson(contents)
+	if err != nil {
+		return nil, fmt.Errorf("seeding secrets failed unmarshaling JSON: %s", err.Error())
+	}
+
+	p.lc.Infof("Seeding %d Service Secrets", len(serviceSecrets.Secrets))
+
+	var seedingErrs error
+	for index, secret := range serviceSecrets.Secrets {
+		if secret.Imported {
+			p.lc.Infof("Secret for '%s' already imported. Skipping...", secret.Path)
+			continue
+		}
+
+		// At this pint the JSON validation and above check cover all the required validation, so go to store secret.
+		path, data := prepareSecret(secret)
+		err := p.StoreSecret(path, data)
+		if err != nil {
+			message := fmt.Sprintf("failed to store secret for '%s': %s", secret.Path, err.Error())
+			p.lc.Errorf(message)
+			seedingErrs = multierror.Append(seedingErrs, errors.New(message))
+			continue
+		}
+
+		p.lc.Infof("Secret for '%s' successfully stored.", secret.Path)
+
+		serviceSecrets.Secrets[index].Imported = true
+		serviceSecrets.Secrets[index].SecretData = make([]common.SecretDataKeyValue, 0)
+	}
+
+	// Now need to write the file back over with the imported secrets' secretData removed.
+	data, err := serviceSecrets.MarshalJson()
+	if err != nil {
+		return nil, fmt.Errorf("seeding secrets failed marshaling back to JSON to clear secrets: %s", err.Error())
+	}
+
+	return data, seedingErrs
+}
+
+func prepareSecret(secret ServiceSecret) (string, map[string]string) {
+	var secretsKV = make(map[string]string)
+	for _, secret := range secret.SecretData {
+		secretsKV[secret.Key] = secret.Value
+	}
+
+	path := strings.TrimSpace(secret.Path)
+
+	return path, secretsKV
 }

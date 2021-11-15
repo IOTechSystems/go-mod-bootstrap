@@ -1,5 +1,6 @@
 /*******************************************************************************
  * Copyright 2019 Dell Inc.
+ * Copyright 2021 IOTech Ltd
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -97,6 +98,12 @@ func (b *HttpServer) BootstrapHandler(
 	b.router.Use(func(next http.Handler) http.Handler {
 		return http.TimeoutHandler(next, timeout, "HTTP request timeout")
 	})
+	b.router.Use(ProcessCORS(bootstrapConfig.Service.CORSConfiguration))
+
+	// handle the CORS preflight request
+	b.router.Methods(http.MethodOptions).MatcherFunc(func(r *http.Request, rm *mux.RouteMatch) bool {
+		return r.Header.Get(AccessControlRequestMethod) != ""
+	}).HandlerFunc(HandlePreflight(bootstrapConfig.Service.CORSConfiguration))
 
 	server := &http.Server{
 		Addr:    addr,
