@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright 2020 Intel Inc.
+ * Copyright 2022 Intel Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -24,13 +24,14 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/edgexfoundry/go-mod-core-contracts/v2/clients/logger"
+
 	"github.com/edgexfoundry/go-mod-bootstrap/v2/bootstrap/container"
 	"github.com/edgexfoundry/go-mod-bootstrap/v2/bootstrap/interfaces"
 	"github.com/edgexfoundry/go-mod-bootstrap/v2/bootstrap/startup"
 	bootstrapConfig "github.com/edgexfoundry/go-mod-bootstrap/v2/config"
 	"github.com/edgexfoundry/go-mod-bootstrap/v2/di"
 
-	"github.com/edgexfoundry/go-mod-core-contracts/v2/clients/logger"
 	"github.com/edgexfoundry/go-mod-secrets/v2/pkg/token/authtokenloader/mocks"
 	"github.com/edgexfoundry/go-mod-secrets/v2/pkg/types"
 	"github.com/edgexfoundry/go-mod-secrets/v2/secrets"
@@ -45,6 +46,7 @@ const (
 	expectedPath     = "/redisdb"
 )
 
+//nolint: gosec
 var testTokenResponse = `{"auth":{"accessor":"9OvxnrjgV0JTYMeBreak7YJ9","client_token":"s.oPJ8uuJCkTRb2RDdcNova8wg","entity_id":"","lease_duration":3600,"metadata":{"edgex-service-name":"edgex-core-data"},"orphan":true,"policies":["default","edgex-service-edgex-core-data"],"renewable":true,"token_policies":["default","edgex-service-edgex-core-data"],"token_type":"service"},"data":null,"lease_duration":0,"lease_id":"","renewable":false,"request_id":"ee749ee1-c8bf-6fa9-3ed5-644181fc25b0","warnings":null,"wrap_info":null}`
 var expectedSecrets = map[string]string{UsernameKey: expectedUsername, PasswordKey: expectedPassword}
 
@@ -111,7 +113,7 @@ func TestNewSecretProvider(t *testing.T) {
 				})
 			}
 
-			actual, err := NewSecretProvider(configuration, context.Background(), timer, dic)
+			actual, err := NewSecretProvider(configuration, context.Background(), timer, dic, "testServiceKey")
 			require.NoError(t, err)
 			require.NotNil(t, actual)
 			actualProvider := container.SecretProviderFrom(dic.Get)
@@ -176,6 +178,10 @@ func (t TestConfig) GetRegistryInfo() bootstrapConfig.RegistryInfo {
 
 func (t TestConfig) GetInsecureSecrets() bootstrapConfig.InsecureSecrets {
 	return t.InsecureSecrets
+}
+
+func (t TestConfig) GetTelemetryInfo() *bootstrapConfig.TelemetryInfo {
+	panic("implement me")
 }
 
 func TestAddPrefix(t *testing.T) {
