@@ -22,7 +22,6 @@ import (
 	"io/ioutil"
 	"math"
 	"reflect"
-	"strings"
 	"sync"
 	"time"
 
@@ -30,7 +29,6 @@ import (
 	"github.com/edgexfoundry/go-mod-bootstrap/v2/bootstrap/environment"
 	"github.com/edgexfoundry/go-mod-bootstrap/v2/bootstrap/flags"
 	"github.com/edgexfoundry/go-mod-bootstrap/v2/bootstrap/interfaces"
-	"github.com/edgexfoundry/go-mod-bootstrap/v2/bootstrap/messaging"
 	"github.com/edgexfoundry/go-mod-bootstrap/v2/bootstrap/secret"
 	"github.com/edgexfoundry/go-mod-bootstrap/v2/bootstrap/startup"
 	"github.com/edgexfoundry/go-mod-bootstrap/v2/config"
@@ -40,6 +38,8 @@ import (
 	"github.com/edgexfoundry/go-mod-configuration/v2/pkg/types"
 
 	"github.com/edgexfoundry/go-mod-core-contracts/v2/clients/logger"
+
+	"github.com/edgexfoundry/go-mod-messaging/v2/messaging"
 
 	"github.com/pelletier/go-toml"
 )
@@ -192,7 +192,7 @@ func (cp *Processor) Process(
 			break
 		}
 
-		cp.listenForChanges(serviceConfig, configClient)
+		cp.listenForChanges(serviceConfig, configClient, configProviderInfo.ServiceConfig().Type)
 
 		cp.dic.Update(di.ServiceConstructorMap{
 			container.ConfigClientInterfaceName: func(get di.Get) interface{} {
@@ -310,7 +310,7 @@ func (cp *Processor) ListenForCustomConfigChanges(
 		updateStream := make(chan interface{})
 		defer close(updateStream)
 
-		configClient.WatchForChanges(updateStream, errorStream, configToWatch, sectionName, nil, nil)
+		configClient.WatchForChanges(updateStream, errorStream, configToWatch, sectionName, nil)
 
 		isFirstUpdate := true
 
@@ -447,7 +447,7 @@ func (cp *Processor) processWithProvider(
 // service's configuration writable sub-struct.  It's assumed the log level is universally part of the
 // writable struct and this function explicitly updates the loggingClient's log level when new configuration changes
 // are received.
-func (cp *Processor) listenForChanges(serviceConfig interfaces.Configuration, configClient configuration.Client) {
+func (cp *Processor) listenForChanges(serviceConfig interfaces.Configuration, configClient configuration.Client, configProviderType string) {
 	lc := cp.lc
 	isFirstUpdate := true
 
@@ -461,16 +461,17 @@ func (cp *Processor) listenForChanges(serviceConfig interfaces.Configuration, co
 		updateStream := make(chan interface{})
 		defer close(updateStream)
 
-		// setting the MessageBus auth options to be used in Keeper config client
-		messageBusInfo := serviceConfig.GetBootstrap().MessageQueue
-		if len(messageBusInfo.AuthMode) > 0 &&
-			!strings.EqualFold(strings.TrimSpace(messageBusInfo.AuthMode), messaging.AuthModeNone) {
-			if err := messaging.SetOptionsAuthData(&messageBusInfo, lc, cp.dic); err != nil {
-				lc.Errorf("setting the MessageBus auth options failed: %v", err)
-				return
+		// get the MessageClient to be used in Keeper WatchForChanges method
+		var messageBus messaging.MessageClient
+		if configProviderType == secret.TokenTypeKeeper {
+			for cp.startupTimer.HasNotElapsed() {
+				if msgClient := container.MessagingClientFrom(cp.dic.Get); msgClient != nil {
+					messageBus = msgClient
+					break
+				}
 			}
 		}
-		go configClient.WatchForChanges(updateStream, errorStream, serviceConfig.EmptyWritablePtr(), writableKey, messageBusInfo)
+		go configClient.WatchForChanges(updateStream, errorStream, serviceConfig.EmptyWritablePtr(), writableKey, messageBus)
 
 		for {
 			select {
