@@ -19,10 +19,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/edgexfoundry/go-mod-bootstrap/v2/config"
 	"io/ioutil"
 	"math"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -30,8 +30,10 @@ import (
 	"github.com/edgexfoundry/go-mod-bootstrap/v2/bootstrap/environment"
 	"github.com/edgexfoundry/go-mod-bootstrap/v2/bootstrap/flags"
 	"github.com/edgexfoundry/go-mod-bootstrap/v2/bootstrap/interfaces"
+	"github.com/edgexfoundry/go-mod-bootstrap/v2/bootstrap/messaging"
 	"github.com/edgexfoundry/go-mod-bootstrap/v2/bootstrap/secret"
 	"github.com/edgexfoundry/go-mod-bootstrap/v2/bootstrap/startup"
+	"github.com/edgexfoundry/go-mod-bootstrap/v2/config"
 	"github.com/edgexfoundry/go-mod-bootstrap/v2/di"
 
 	"github.com/edgexfoundry/go-mod-configuration/v2/configuration"
@@ -308,7 +310,7 @@ func (cp *Processor) ListenForCustomConfigChanges(
 		updateStream := make(chan interface{})
 		defer close(updateStream)
 
-		configClient.WatchForChanges(updateStream, errorStream, configToWatch, sectionName)
+		configClient.WatchForChanges(updateStream, errorStream, configToWatch, sectionName, nil, nil)
 
 		isFirstUpdate := true
 
@@ -459,7 +461,16 @@ func (cp *Processor) listenForChanges(serviceConfig interfaces.Configuration, co
 		updateStream := make(chan interface{})
 		defer close(updateStream)
 
-		go configClient.WatchForChanges(updateStream, errorStream, serviceConfig.EmptyWritablePtr(), writableKey)
+		// setting the MessageBus auth options to be used in Keeper config client
+		messageBusInfo := serviceConfig.GetBootstrap().MessageQueue
+		if len(messageBusInfo.AuthMode) > 0 &&
+			!strings.EqualFold(strings.TrimSpace(messageBusInfo.AuthMode), messaging.AuthModeNone) {
+			if err := messaging.SetOptionsAuthData(&messageBusInfo, lc, cp.dic); err != nil {
+				lc.Errorf("setting the MessageBus auth options failed: %v", err)
+				return
+			}
+		}
+		go configClient.WatchForChanges(updateStream, errorStream, serviceConfig.EmptyWritablePtr(), writableKey, messageBusInfo)
 
 		for {
 			select {
