@@ -469,6 +469,11 @@ func (cp *Processor) listenForChanges(serviceConfig interfaces.Configuration, co
 					messageBus = msgClient
 					break
 				}
+				cp.startupTimer.SleepForInterval()
+			}
+			if messageBus == nil {
+				lc.Error("unable to use MessageClient to watch for configuration changes")
+				return
 			}
 		}
 		go configClient.WatchForChanges(updateStream, errorStream, serviceConfig.EmptyWritablePtr(), writableKey, messageBus)
