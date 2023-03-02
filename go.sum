@@ -2,8 +2,8 @@ cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMT
 cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/DataDog/datadog-go v3.2.0+incompatible/go.mod h1:LButxg5PwREeZtORoXG3tL4fMGNddJ+vMq1mwgfaqoQ=
-github.com/IOTechSystems/go-mod-configuration/v2 v2.2.1-dev.3.0.20230224031224-0e1db954f09d h1:cR5YINdV81GkC8I8XfXU5kPvqogULizmcwZJDB9Kj+8=
-github.com/IOTechSystems/go-mod-configuration/v2 v2.2.1-dev.3.0.20230224031224-0e1db954f09d/go.mod h1:eQdZFwiWsf8GUYEfXIyeVMRMzHfNR3RNgEdJWv0o78k=
+github.com/IOTechSystems/go-mod-configuration/v2 v2.2.1-dev.3.0.20230302022901-b0bfe91dfe1f h1:eL/afnAMQx3IRkuUIHt2cfynmEaJFWeNnLp/pgEm9Hg=
+github.com/IOTechSystems/go-mod-configuration/v2 v2.2.1-dev.3.0.20230302022901-b0bfe91dfe1f/go.mod h1:eQdZFwiWsf8GUYEfXIyeVMRMzHfNR3RNgEdJWv0o78k=
 github.com/Microsoft/go-winio v0.5.2 h1:a9IhgEQBCUEk6QCdml9CiJGhAws+YwffDHEMp1VMrpA=
 github.com/Microsoft/go-winio v0.5.2/go.mod h1:WpS1mjBmmwHBEWmogvA2mj8546UReBk4v8QkMxJ6pZY=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
