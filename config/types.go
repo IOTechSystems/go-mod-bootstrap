@@ -169,7 +169,7 @@ type Credentials struct {
 	Password string
 }
 
-//CertKeyPair encapsulates public certificate/private key pair for an SSL certificate
+// CertKeyPair encapsulates public certificate/private key pair for an SSL certificate
 type CertKeyPair struct {
 	Cert string
 	Key  string

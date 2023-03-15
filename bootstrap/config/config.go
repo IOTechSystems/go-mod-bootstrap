@@ -19,8 +19,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math"
+	"os"
 	"reflect"
 	"sync"
 	"time"
@@ -383,7 +383,7 @@ func (cp *Processor) loadFromFile(config interface{}, configType string) error {
 
 	filePath := configDir + "/" + profileDir + configFileName
 
-	contents, err := ioutil.ReadFile(filePath)
+	contents, err := os.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("could not load %s configuration file (%s): %s", configType, filePath, err.Error())
 	}
