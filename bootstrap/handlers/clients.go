@@ -65,7 +65,9 @@ func (cb *ClientsBootstrap) BootstrapHandler(
 			url, err = cb.getClientUrl(serviceKey, serviceInfo.Url(), startupTimer, lc)
 			if err != nil {
 				lc.Error(err.Error())
-				return false
+				// Edge Xpert v2.3.1: Errors in getting the client URL should not cause the bootstrap process to fail and the default URL will be used.
+				//return false
+				url = serviceInfo.Url()
 			}
 		}
 

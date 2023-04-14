@@ -133,7 +133,7 @@ func TestClientsBootstrapHandler(t *testing.T) {
 			NotificationClientInfo: nil,
 			SchedulerClientInfo:    nil,
 			Registry:               registryErrorMock,
-			ExpectedResult:         false,
+			ExpectedResult:         true,
 		},
 		{
 			Name:                   "No ClientsBootstrap",
