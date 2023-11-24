@@ -22,6 +22,7 @@ import (
 	"math"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -310,7 +311,23 @@ func (cp *Processor) ListenForCustomConfigChanges(
 		updateStream := make(chan interface{})
 		defer close(updateStream)
 
-		configClient.WatchForChanges(updateStream, errorStream, configToWatch, sectionName, nil)
+		var messageBus messaging.MessageClient
+		configProviderUrl := cp.flags.ConfigProviderUrl()
+		// check if the config provider type is keeper
+		if strings.HasPrefix(configProviderUrl, secret.TokenTypeKeeper) {
+			for cp.startupTimer.HasNotElapsed() {
+				if msgClient := container.MessagingClientFrom(cp.dic.Get); msgClient != nil {
+					messageBus = msgClient
+					break
+				}
+				cp.startupTimer.SleepForInterval()
+			}
+			if messageBus == nil {
+				cp.lc.Error("unable to use MessageClient to watch for custom configuration changes")
+				return
+			}
+		}
+		go configClient.WatchForChanges(updateStream, errorStream, configToWatch, sectionName, messageBus)
 
 		isFirstUpdate := true
 
