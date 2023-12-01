@@ -290,7 +290,7 @@ func (cp *Processor) LoadCustomConfigSection(config interfaces.UpdatableConfig, 
 }
 
 // ListenForCustomConfigChanges listens for changes to the specified custom configuration section. When changes occur it
-// applies the changes to the custom configuration section and signals the the changes have occurred.
+// applies the changes to the custom configuration section and signals the changes have occurred.
 func (cp *Processor) ListenForCustomConfigChanges(
 	configToWatch interface{},
 	sectionName string,
@@ -315,6 +315,11 @@ func (cp *Processor) ListenForCustomConfigChanges(
 		configProviderUrl := cp.flags.ConfigProviderUrl()
 		// check if the config provider type is keeper
 		if strings.HasPrefix(configProviderUrl, secret.TokenTypeKeeper) {
+			// there's no startupTimer for cp created by NewProcessorForCustomConfig
+			// add a new startupTimer here
+			if !cp.startupTimer.HasNotElapsed() {
+				cp.startupTimer = startup.NewStartUpTimer("")
+			}
 			for cp.startupTimer.HasNotElapsed() {
 				if msgClient := container.MessagingClientFrom(cp.dic.Get); msgClient != nil {
 					messageBus = msgClient
