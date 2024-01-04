@@ -249,7 +249,7 @@ func (p *SecureProvider) SecretsLastUpdated() time.Time {
 func (p *SecureProvider) GetAccessToken(tokenType string, serviceKey string) (string, error) {
 	if strings.HasPrefix(serviceKey, "app-") {
 		serviceKey = "app-service"
-		p.lc.Infof("[EdgeXpert] Overwrote ASC serviceKey")
+		p.lc.Infof("[EdgeCentral] Overwrote ASC serviceKey")
 	}
 	if tokenType == TokenTypeConsul {
 		p.securityConsulTokensRequested.Inc(1)

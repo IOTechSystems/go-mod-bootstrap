@@ -267,16 +267,16 @@ func (cp *Processor) Process(
 
 	// listen for changes on Writable
 	if useProvider {
-		cp.listenForPrivateChanges(serviceConfig, privateConfigClient, utils.BuildBaseKey(configStem, serviceKey))
+		cp.listenForPrivateChanges(serviceConfig, privateConfigClient, utils.BuildBaseKey(configStem, serviceKey), configProviderInfo.ServiceConfig().Type)
 		cp.lc.Infof("listening for private config changes")
-		cp.listenForCommonChanges(serviceConfig, cp.commonConfigClient, privateConfigClient, utils.BuildBaseKey(configStem, common.CoreCommonConfigServiceKey, allServicesKey))
+		cp.listenForCommonChanges(serviceConfig, cp.commonConfigClient, privateConfigClient, utils.BuildBaseKey(configStem, common.CoreCommonConfigServiceKey, allServicesKey), configProviderInfo.ServiceConfig().Type)
 		cp.lc.Infof("listening for all services common config changes")
 		if cp.appConfigClient != nil {
-			cp.listenForCommonChanges(serviceConfig, cp.appConfigClient, privateConfigClient, utils.BuildBaseKey(configStem, common.CoreCommonConfigServiceKey, appServicesKey))
+			cp.listenForCommonChanges(serviceConfig, cp.appConfigClient, privateConfigClient, utils.BuildBaseKey(configStem, common.CoreCommonConfigServiceKey, appServicesKey), configProviderInfo.ServiceConfig().Type)
 			cp.lc.Infof("listening for application service common config changes")
 		}
 		if cp.deviceConfigClient != nil {
-			cp.listenForCommonChanges(serviceConfig, cp.deviceConfigClient, privateConfigClient, utils.BuildBaseKey(configStem, common.CoreCommonConfigServiceKey, deviceServicesKey))
+			cp.listenForCommonChanges(serviceConfig, cp.deviceConfigClient, privateConfigClient, utils.BuildBaseKey(configStem, common.CoreCommonConfigServiceKey, deviceServicesKey), configProviderInfo.ServiceConfig().Type)
 			cp.lc.Infof("listening for device service common config changes")
 		}
 	}
@@ -663,7 +663,7 @@ func (cp *Processor) ListenForCustomConfigChanges(
 		var messageBus messaging.MessageClient
 		configProviderUrl := cp.flags.ConfigProviderUrl()
 		// check if the config provider type is keeper
-		if strings.HasPrefix(configProviderUrl, secret.TokenTypeKeeper) {
+		if strings.HasPrefix(configProviderUrl, TokenTypeKeeper) {
 			// there's no startupTimer for cp created by NewProcessorForCustomConfig
 			// add a new startupTimer here
 			if !cp.startupTimer.HasNotElapsed() {
@@ -806,7 +806,7 @@ func (cp *Processor) listenForPrivateChanges(serviceConfig interfaces.Configurat
 
 		// get the MessageClient to be used in Keeper WatchForChanges method
 		var messageBus messaging.MessageClient
-		if configProviderType == secret.TokenTypeKeeper {
+		if configProviderType == TokenTypeKeeper {
 			for cp.startupTimer.HasNotElapsed() {
 				if msgClient := container.MessagingClientFrom(cp.dic.Get); msgClient != nil {
 					messageBus = msgClient
@@ -862,7 +862,7 @@ func (cp *Processor) listenForPrivateChanges(serviceConfig interfaces.Configurat
 // listenForCommonChanges leverages the Configuration Provider client's WatchForChanges() method to receive changes to and update the
 // service's common configuration writable sub-struct.
 func (cp *Processor) listenForCommonChanges(fullServiceConfig interfaces.Configuration, configClient configuration.Client,
-	privateConfigClient configuration.Client, baseKey string) {
+	privateConfigClient configuration.Client, baseKey string, configProviderType string) {
 	lc := cp.lc
 	isFirstUpdate := true
 	baseKey = utils.BuildBaseKey(baseKey, writableKey)
@@ -881,7 +881,22 @@ func (cp *Processor) listenForCommonChanges(fullServiceConfig interfaces.Configu
 		updateStream := make(chan any)
 		defer close(updateStream)
 
-		go commonConfigClient.WatchForChanges(updateStream, errorStream, fullServiceConfig.EmptyWritablePtr(), writableKey)
+		// get the MessageClient to be used in Keeper WatchForChanges method
+		var messageBus messaging.MessageClient
+		if configProviderType == TokenTypeKeeper {
+			for cp.startupTimer.HasNotElapsed() {
+				if msgClient := container.MessagingClientFrom(cp.dic.Get); msgClient != nil {
+					messageBus = msgClient
+					break
+				}
+				cp.startupTimer.SleepForInterval()
+			}
+			if messageBus == nil {
+				lc.Error("unable to use MessageClient to watch for configuration changes")
+				return
+			}
+		}
+		go commonConfigClient.WatchForChanges(updateStream, errorStream, fullServiceConfig.EmptyWritablePtr(), writableKey, messageBus)
 
 		for {
 			select {
