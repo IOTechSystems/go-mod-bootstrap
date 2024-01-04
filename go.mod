@@ -77,3 +77,5 @@ require (
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
+
+replace github.com/edgexfoundry/go-mod-configuration/v3 => github.com/IOTechSystems/go-mod-configuration/v3 EDX-4081-branch
