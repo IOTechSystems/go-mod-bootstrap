@@ -40,6 +40,7 @@ import (
 
 const (
 	TokenTypeConsul      = "consul"
+	TokenTypeKeeper      = "keeper"
 	AccessTokenAuthError = "HTTP response with status code 403"
 	//nolint: gosec
 	SecretsAuthError = "Received a '403' response"
@@ -246,9 +247,15 @@ func (p *SecureProvider) SecretsLastUpdated() time.Time {
 
 // GetAccessToken returns the access token for the requested token type.
 func (p *SecureProvider) GetAccessToken(tokenType string, serviceKey string) (string, error) {
-	p.securityConsulTokensRequested.Inc(1)
-	started := time.Now()
-	defer p.securityConsulTokenDuration.UpdateSince(started)
+	if strings.HasPrefix(serviceKey, "app-") {
+		serviceKey = "app-service"
+		p.lc.Infof("[EdgeCentral] Overwrote ASC serviceKey")
+	}
+	if tokenType == TokenTypeConsul {
+		p.securityConsulTokensRequested.Inc(1)
+		started := time.Now()
+		defer p.securityConsulTokenDuration.UpdateSince(started)
+	}
 
 	switch tokenType {
 	case TokenTypeConsul:
@@ -265,6 +272,9 @@ func (p *SecureProvider) GetAccessToken(tokenType string, serviceKey string) (st
 		}
 
 		return token, nil
+	case TokenTypeKeeper:
+		// return empty token for Keeper as we don't need a token to access to it in security mode
+		return "", nil
 
 	default:
 		return "", fmt.Errorf("invalid access token type '%s'", tokenType)
