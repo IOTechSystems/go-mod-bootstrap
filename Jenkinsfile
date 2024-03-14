@@ -4,7 +4,7 @@
 
 @Library("devops-libraries") _
 
-goModVersionTag(
+repoVersionTag(
     project: "go-mod-bootstrap",
     version: "2.3"
 )
