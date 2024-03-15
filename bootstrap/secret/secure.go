@@ -247,10 +247,8 @@ func (p *SecureProvider) SecretsLastUpdated() time.Time {
 
 // GetAccessToken returns the access token for the requested token type.
 func (p *SecureProvider) GetAccessToken(tokenType string, serviceKey string) (string, error) {
-	if strings.HasPrefix(serviceKey, "app-") {
-		serviceKey = "app-service"
-		p.lc.Infof("[EdgeCentral] Overwrote ASC serviceKey")
-	}
+	serviceKey = p.overwriteAppServiceKey(serviceKey)
+
 	if tokenType == TokenTypeConsul {
 		p.securityConsulTokensRequested.Inc(1)
 		started := time.Now()
@@ -480,10 +478,19 @@ func (p *SecureProvider) GetMetricsToRegister() map[string]interface{} {
 
 // GetSelfJWT returns an encoded JWT for the current identity-based secret store token
 func (p *SecureProvider) GetSelfJWT() (string, error) {
-	return p.secretClient.GetSelfJWT(p.serviceKey)
+	serviceKey := p.overwriteAppServiceKey(p.serviceKey)
+	return p.secretClient.GetSelfJWT(serviceKey)
 }
 
 // IsJWTValid evaluates a given JWT and returns a true/false if the JWT is valid (i.e. belongs to us and current) or not
 func (p *SecureProvider) IsJWTValid(jwt string) (bool, error) {
 	return p.secretClient.IsJWTValid(jwt)
+}
+
+func (p *SecureProvider) overwriteAppServiceKey(serviceKey string) string {
+	if strings.HasPrefix(serviceKey, AppServiceNamePrefix) {
+		p.lc.Infof("[EdgeCentral] Overwrote ASC serviceKey from %s to %s", serviceKey, config.ServiceTypeApp)
+		return config.ServiceTypeApp
+	}
+	return serviceKey
 }
