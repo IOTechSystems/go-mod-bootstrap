@@ -43,14 +43,16 @@ type HttpServer struct {
 	router           *echo.Echo
 	isRunning        bool
 	doListenAndServe bool
+	serverKey        string
 }
 
 // NewHttpServer is a factory method that returns an initialized HttpServer receiver struct.
-func NewHttpServer(router *echo.Echo, doListenAndServe bool) *HttpServer {
+func NewHttpServer(router *echo.Echo, doListenAndServe bool, serviceKey string) *HttpServer {
 	return &HttpServer{
 		router:           router,
 		isRunning:        false,
 		doListenAndServe: doListenAndServe,
+		serverKey:        serviceKey,
 	}
 }
 
