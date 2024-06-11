@@ -6,5 +6,6 @@
 package secret
 
 const (
-	AppServiceNamePrefix = "app-"
+	AppServiceNamePrefix    = "app-"
+	EnvCommunityIntegration = "EDGECENTRAL_COMMUNITY_INTEGRATION"
 )

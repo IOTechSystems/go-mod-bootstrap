@@ -488,7 +488,8 @@ func (p *SecureProvider) IsJWTValid(jwt string) (bool, error) {
 }
 
 func (p *SecureProvider) overwriteAppServiceKey(serviceKey string) string {
-	if strings.HasPrefix(serviceKey, AppServiceNamePrefix) {
+	if strings.HasPrefix(serviceKey, AppServiceNamePrefix) &&
+		!strings.EqualFold(os.Getenv(EnvCommunityIntegration), "true") {
 		p.lc.Infof("[EdgeCentral] Overwrote ASC serviceKey from %s to %s", serviceKey, config.ServiceTypeApp)
 		return config.ServiceTypeApp
 	}
