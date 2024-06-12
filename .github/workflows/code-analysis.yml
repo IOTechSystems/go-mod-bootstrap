@@ -18,8 +18,3 @@ jobs:
       with:
         GO_LINT_CONFIG_PATH: .golangci.yml
         REQUIRED_PACKAGES: libzmq3-dev
-    call-sonar-scan:
-      uses: IOTechSystems/github-action-workflow/.github/workflows/reusable-sonarqube-scan.yml@main
-      with:
-        PROJECT_NAME: go-mod-bootstrap
-      secrets: inherit
