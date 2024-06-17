@@ -83,6 +83,6 @@ replace github.com/edgexfoundry/go-mod-configuration/v3 => github.com/IOTechSyst
 
 replace github.com/edgexfoundry/go-mod-core-contracts/v3 => github.com/IOTechSystems/go-mod-core-contracts/v3 v3.1.69
 
-replace github.com/edgexfoundry/go-mod-messaging/v3 => github.com/IOTechSystems/go-mod-messaging/v3 v3.1.7
+replace github.com/edgexfoundry/go-mod-messaging/v3 => github.com/IOTechSystems/go-mod-messaging/v3 v3.1.8
 
 replace github.com/edgexfoundry/go-mod-registry/v3 => github.com/IOTechSystems/go-mod-registry/v3 v3.1.2
