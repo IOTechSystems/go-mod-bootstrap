@@ -3,8 +3,8 @@ github.com/IOTechSystems/go-mod-configuration/v3 v3.1.4 h1:+xx4aLphhxUWlSXRClZdS
 github.com/IOTechSystems/go-mod-configuration/v3 v3.1.4/go.mod h1:nW2QkZXuydFHu1s06neizixwZgM521GH8Yb9V4iO/N0=
 github.com/IOTechSystems/go-mod-core-contracts/v3 v3.1.69 h1:wfrlEZWrVggSsKHiCkWFn/zoGtyvmt4HL5ncc+i+Bng=
 github.com/IOTechSystems/go-mod-core-contracts/v3 v3.1.69/go.mod h1:SXiWc93Lnh1M8F1Du/gXeQuKqypMpZ4FfXbGlD+gaXs=
-github.com/IOTechSystems/go-mod-messaging/v3 v3.1.7 h1:98BXUL2/fnJBKErPueJVty5Rmd5Pr9/HKHuKx41pCSc=
-github.com/IOTechSystems/go-mod-messaging/v3 v3.1.7/go.mod h1:H1q3Q9CjL2JyqTiqOJk7Zjj25Wwkyg2fFBEifnYot28=
+github.com/IOTechSystems/go-mod-messaging/v3 v3.1.8 h1:Odf9f2qliuMWywtgycNnZeey4F2NRC7XaElz+G03jeA=
+github.com/IOTechSystems/go-mod-messaging/v3 v3.1.8/go.mod h1:H1q3Q9CjL2JyqTiqOJk7Zjj25Wwkyg2fFBEifnYot28=
 github.com/IOTechSystems/go-mod-registry/v3 v3.1.2 h1:hjzMst/yJEJGvCjHdNHnPDdKK5RjTvy07o/qvMNWU3Y=
 github.com/IOTechSystems/go-mod-registry/v3 v3.1.2/go.mod h1:HkAwzgWKvE0Nx+mvWVprVHd8r4HHciIf1Sl1wRpTB7U=
 github.com/Microsoft/go-winio v0.6.0 h1:slsWYD/zyx7lCXoZVlvQrj0hPTM1HI4+v1sIda2yDvg=

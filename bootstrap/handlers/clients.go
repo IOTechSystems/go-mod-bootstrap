@@ -123,7 +123,11 @@ func (cb *ClientsBootstrap) BootstrapHandler(
 					}
 
 					baseTopic := config.GetBootstrap().MessageBus.GetBaseTopicPrefix()
-					client = clientsMessaging.NewCommandClient(messageClient, baseTopic, timeout)
+					if config.GetBootstrap().Service.EnableNameFieldEscape {
+						client = clientsMessaging.NewCommandClientWithNameFieldEscape(messageClient, baseTopic, timeout)
+					} else {
+						client = clientsMessaging.NewCommandClient(messageClient, baseTopic, timeout)
+					}
 
 					lc.Infof("Using messaging for '%s' clients", serviceKey)
 				} else {
