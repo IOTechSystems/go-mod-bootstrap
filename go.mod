@@ -1,6 +1,6 @@
 module github.com/edgexfoundry/go-mod-bootstrap/v3
 
-go 1.21
+go 1.23
 
 require (
 	github.com/eclipse/paho.mqtt.golang v1.5.0
@@ -32,7 +32,7 @@ require (
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-playground/validator/v10 v10.22.0 // indirect
+	github.com/go-playground/validator/v10 v10.22.1 // indirect
 	github.com/go-redis/redis/v7 v7.4.1 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
@@ -70,7 +70,7 @@ require (
 	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.24.0 // indirect
-	golang.org/x/text v0.17.0 // indirect
+	golang.org/x/text v0.19.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.24.0 // indirect
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
@@ -79,10 +79,10 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
-replace github.com/edgexfoundry/go-mod-configuration/v3 => github.com/IOTechSystems/go-mod-configuration/v3 v3.1.4
+replace github.com/edgexfoundry/go-mod-configuration/v3 => github.com/IOTechSystems/go-mod-configuration/v3 v3.1.5
 
-replace github.com/edgexfoundry/go-mod-core-contracts/v3 => github.com/IOTechSystems/go-mod-core-contracts/v3 v3.1.69
+replace github.com/edgexfoundry/go-mod-core-contracts/v3 => github.com/IOTechSystems/go-mod-core-contracts/v3 v3.1.76
 
-replace github.com/edgexfoundry/go-mod-messaging/v3 => github.com/IOTechSystems/go-mod-messaging/v3 v3.1.8
+replace github.com/edgexfoundry/go-mod-messaging/v3 => github.com/IOTechSystems/go-mod-messaging/v3 v3.1.9
 
-replace github.com/edgexfoundry/go-mod-registry/v3 => github.com/IOTechSystems/go-mod-registry/v3 v3.1.2
+replace github.com/edgexfoundry/go-mod-registry/v3 => github.com/IOTechSystems/go-mod-registry/v3 v3.1.3
